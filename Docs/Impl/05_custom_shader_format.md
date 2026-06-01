@@ -59,7 +59,8 @@ Shader "*LIL_SHADER_NAME*"
 | キーワード | 説明 |
 |-----------|------|
 | `lilSubShaderTags {}` | SubShader 内の Tags ブロックを指定 |
-| `lilSubShaderInsert "キーワード"` | Unity ライブラリ include 後に処理を挿入 |
+| `lilSubShaderInsert "キーワード"` | Unity ライブラリの `#include` 直後に処理を挿入 |
+| `lilSubShaderInsertPost "キーワード"` | `vert()` 定義の後に処理を挿入（ジオメトリシェーダー定義に使用） |
 | `lilPassShaderName "シェーダー名"` | UsePass で読み込むソースシェーダー名を指定 |
 | `lilSubShaderBRP "キーワード"` | Built-in RP の SubShader を挿入 |
 | `lilSubShaderURP "キーワード"` | URP の SubShader を挿入 |

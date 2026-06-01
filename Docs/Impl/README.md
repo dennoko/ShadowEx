@@ -12,6 +12,7 @@
 | [03_custom_shader.md](03_custom_shader.md) | カスタムシェーダーの作り方（手順・マクロ・Inspector 拡張） | custom_shader.html |
 | [04_utilities.md](04_utilities.md) | HLSL ユーティリティ マクロ・関数・構造体リファレンス | utilities.html |
 | [05_custom_shader_format.md](05_custom_shader_format.md) | .lilcontainer / .lilblock ファイルの仕様 | custom_shader_format.html |
+| [06_geometry_shader.md](06_geometry_shader.md) | ジオメトリシェーダーの挿入方法（GeometryFX 実装解説） | ― |
 
 ## 開発の流れ（概要）
 
