@@ -14,3 +14,20 @@
         //   [HDR]           : カラーをHDR入力として扱う
         //
         //_CustomVariable ("Custom Variable", Float) = 0
+
+        //--------------------------------------------------------------------------------------------------------------
+        // 画面空間疑似影（SSAO + Contact Shadow）
+        // HLSL 変数は custom.hlsl の LIL_CUSTOM_PROPERTIES に定義済み。
+        // 軽量化のため _SSAO_Samples + _ContactShadow_Steps は合計 12 以下を推奨。
+        //--------------------------------------------------------------------------------------------------------------
+        [lilToggle]     _SSAO_Enable                ("SSAO Enable", Int) = 1
+                        _SSAO_Radius                ("SSAO Radius (px)", Float) = 8.0
+                        _SSAO_Samples               ("SSAO Samples", Range(1, 8)) = 6
+                        _SSAO_Intensity             ("SSAO Intensity", Range(0, 2)) = 1.0
+                        _SSAO_Bias                  ("SSAO Bias", Float) = 0.02
+
+        [lilToggle]     _ContactShadow_Enable       ("Contact Shadow Enable", Int) = 1
+                        _ContactShadow_Steps        ("Contact Shadow Steps", Range(1, 8)) = 5
+                        _ContactShadow_Length       ("Contact Shadow Length", Float) = 0.15
+                        _ContactShadow_Thickness    ("Contact Shadow Thickness", Float) = 0.1
+                        _ContactShadow_Intensity    ("Contact Shadow Intensity", Range(0, 1)) = 1.0

@@ -9,14 +9,24 @@ namespace lilToon
     //   2. 下の shaderName 定数
     //   3. Shaders/lilCustomShaderDatas.lilblock の ShaderName タグ・EditorName タグ
     //   4. Editor/TemplateFull.asmdef の name フィールドとファイル名自体
-    public class TemplateFullInspector : lilToonInspector
+    public class ShadowExInspector : lilToonInspector
     {
-        // Custom properties
-        // ここで MaterialProperty を宣言し、LoadCustomProperties() で FindProperty() する
-        //MaterialProperty customVariable;
+        // Custom properties（画面空間疑似影）
+        // SSAO
+        MaterialProperty ssaoEnable;
+        MaterialProperty ssaoRadius;
+        MaterialProperty ssaoSamples;
+        MaterialProperty ssaoIntensity;
+        MaterialProperty ssaoBias;
+        // Contact Shadow
+        MaterialProperty contactEnable;
+        MaterialProperty contactSteps;
+        MaterialProperty contactLength;
+        MaterialProperty contactThickness;
+        MaterialProperty contactIntensity;
 
         private static bool isShowCustomProperties;
-        private const string shaderName = "TemplateFull";
+        private const string shaderName = "ShadowEx";
 
         protected override void LoadCustomProperties(MaterialProperty[] props, Material material)
         {
@@ -30,7 +40,19 @@ namespace lilToon
             //isShowRenderMode = false;
 
             //LoadCustomLanguage("");
-            //customVariable = FindProperty("_CustomVariable", props);
+
+            // FindProperty 名は lilCustomShaderProperties.lilblock のプロパティ名と完全一致させること
+            ssaoEnable       = FindProperty("_SSAO_Enable", props);
+            ssaoRadius       = FindProperty("_SSAO_Radius", props);
+            ssaoSamples      = FindProperty("_SSAO_Samples", props);
+            ssaoIntensity    = FindProperty("_SSAO_Intensity", props);
+            ssaoBias         = FindProperty("_SSAO_Bias", props);
+
+            contactEnable    = FindProperty("_ContactShadow_Enable", props);
+            contactSteps     = FindProperty("_ContactShadow_Steps", props);
+            contactLength    = FindProperty("_ContactShadow_Length", props);
+            contactThickness = FindProperty("_ContactShadow_Thickness", props);
+            contactIntensity = FindProperty("_ContactShadow_Intensity", props);
         }
 
         protected override void DrawCustomProperties(Material material)
@@ -51,14 +73,43 @@ namespace lilToon
             //   m_MaterialEditor.ShaderProperty() : 通常プロパティの描画
             //   m_MaterialEditor.TexturePropertySingleLine() : テクスチャ + インラインプロパティ
 
-            isShowCustomProperties = Foldout("Custom Properties", "Custom Properties", isShowCustomProperties);
+            isShowCustomProperties = Foldout("Screen Space Shadow", "Screen Space Shadow", isShowCustomProperties);
             if(isShowCustomProperties)
             {
                 EditorGUILayout.BeginVertical(boxOuter);
-                EditorGUILayout.LabelField(GetLoc("Custom Properties"), customToggleFont);
+                EditorGUILayout.LabelField("Screen Space Shadow", customToggleFont);
                 EditorGUILayout.BeginVertical(boxInnerHalf);
 
-                //m_MaterialEditor.ShaderProperty(customVariable, "Custom Variable");
+                // SSAO
+                m_MaterialEditor.ShaderProperty(ssaoEnable, "SSAO Enable");
+                if(ssaoEnable.floatValue > 0.5f)
+                {
+                    EditorGUI.indentLevel++;
+                    m_MaterialEditor.ShaderProperty(ssaoRadius, "Radius (px)");
+                    m_MaterialEditor.ShaderProperty(ssaoSamples, "Samples");
+                    m_MaterialEditor.ShaderProperty(ssaoIntensity, "Intensity");
+                    m_MaterialEditor.ShaderProperty(ssaoBias, "Bias");
+                    EditorGUI.indentLevel--;
+                }
+
+                DrawLine();
+
+                // Contact Shadow
+                m_MaterialEditor.ShaderProperty(contactEnable, "Contact Shadow Enable");
+                if(contactEnable.floatValue > 0.5f)
+                {
+                    EditorGUI.indentLevel++;
+                    m_MaterialEditor.ShaderProperty(contactSteps, "Steps");
+                    m_MaterialEditor.ShaderProperty(contactLength, "Length");
+                    m_MaterialEditor.ShaderProperty(contactThickness, "Thickness");
+                    m_MaterialEditor.ShaderProperty(contactIntensity, "Intensity");
+                    EditorGUI.indentLevel--;
+                }
+
+                // 軽量化の注意（Samples + Steps の合計が多いと多人数インスタンスで重くなる）
+                EditorGUILayout.HelpBox(
+                    "Samples + Steps の合計は 12 以下を推奨。深度テクスチャが無いワールドでは効果が出ません。",
+                    MessageType.Info);
 
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndVertical();
@@ -132,11 +183,11 @@ namespace lilToon
 
         // You can create a menu like this
         /*
-        [MenuItem("Assets/TemplateFull/Convert material to custom shader", false, 1100)]
+        [MenuItem("Assets/ShadowEx/Convert material to custom shader", false, 1100)]
         private static void ConvertMaterialToCustomShaderMenu()
         {
             if(Selection.objects.Length == 0) return;
-            TemplateFullInspector inspector = new TemplateFullInspector();
+            ShadowExInspector inspector = new ShadowExInspector();
             for(int i = 0; i < Selection.objects.Length; i++)
             {
                 if(Selection.objects[i] is Material)

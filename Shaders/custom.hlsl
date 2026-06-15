@@ -4,9 +4,18 @@
 // Custom variables
 // float・float4 等の通常変数はここに定義する（行末のバックスラッシュを忘れずに）
 // 対応する ShaderLab プロパティは lilCustomShaderProperties.lilblock に記述する
-//#define LIL_CUSTOM_PROPERTIES \
-//    float _CustomVariable;
-#define LIL_CUSTOM_PROPERTIES
+// 画面空間疑似影（SSAO / Contact Shadow）用パラメーター
+#define LIL_CUSTOM_PROPERTIES            \
+    float _SSAO_Enable;                 \
+    float _SSAO_Radius;                 \
+    float _SSAO_Samples;                \
+    float _SSAO_Intensity;              \
+    float _SSAO_Bias;                   \
+    float _ContactShadow_Enable;        \
+    float _ContactShadow_Steps;         \
+    float _ContactShadow_Length;        \
+    float _ContactShadow_Thickness;     \
+    float _ContactShadow_Intensity;
 
 // Custom textures
 // TEXTURE2D はここに定義する（SAMPLER は sampler_linear_repeat 等の共有サンプラーを流用可能）
@@ -32,7 +41,8 @@
 //#define LIL_V2F_FORCE_TEXCOORD0
 //#define LIL_V2F_FORCE_TEXCOORD1
 //#define LIL_V2F_FORCE_POSITION_OS
-//#define LIL_V2F_FORCE_POSITION_WS
+// 画面空間影の計算にワールド座標が必須なので強制的に v2f へ含める
+#define LIL_V2F_FORCE_POSITION_WS
 //#define LIL_V2F_FORCE_POSITION_SS
 //#define LIL_V2F_FORCE_NORMAL
 //#define LIL_V2F_FORCE_TANGENT
@@ -68,6 +78,14 @@
 // ピクセルシェーダー内では lilFragData fd のメンバーを読み書きする（下記リファレンス参照）
 //#define BEFORE_xx
 //#define OVERRIDE_xx
+
+// 最終出力の直前に画面空間疑似影（SSAO + Contact Shadow）を乗算する。
+// lilApplyScreenSpaceShadow() の実体は custom_insert.hlsl（Unity 関数依存のため）。
+// OUTPUT 直前は機能トグルに依存せず必ず実行されるため、確実に影を適用できる。
+// 注意: この時点で fd.col にはエミッションも加算済みのため、エミッション部もわずかに減衰する。
+//       エミッションを減衰させたくない場合は BEFORE_EMISSION_1ST に変更する
+//       （ただしエミッション機能が無効なマテリアルでは挿入点ごと消える点に注意）。
+#define BEFORE_OUTPUT lilApplyScreenSpaceShadow(fd.col, fd.positionWS, fd.origL, fd.uvScn * _ScreenParams.xy);
 
 //----------------------------------------------------------------------------------------------------------------------
 // Information about variables
