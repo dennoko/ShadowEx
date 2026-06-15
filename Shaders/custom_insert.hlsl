@@ -25,10 +25,13 @@
 //----------------------------------------------------------------------------------------------------------------------
 #if defined(LIL_PASS_FORWARD)
 
-// VRChat / BRP では _CameraDepthTexture が供給される。
-// lilToon 本体は forward パスで _CameraDepthTexture を宣言しないため、ここで宣言する。
-UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
-float4 _CameraDepthTexture_TexelSize;
+// _CameraDepthTexture は lilToon / Unity 側で既に宣言されているため、ここでは宣言しない
+// （宣言すると redefinition エラーになる）。サンプリングのみ行う。
+// テクセルサイズは _CameraDepthTexture_TexelSize に頼らず _ScreenParams から算出する
+// （こちらも宣言済みかどうかが環境依存のため）。
+
+// 1 ピクセルあたりの UV 幅（深度テクスチャは全画面解像度なので画面解像度の逆数と一致）。
+#define LIL_SS_TEXEL_SIZE (1.0 / _ScreenParams.xy)
 
 // 指定スクリーン UV の深度バッファをリニア（アイ）深度で取得する。
 float lilSSSceneEyeDepth(float2 uv)
@@ -73,7 +76,7 @@ float lilSSCalcSSAO(float2 uv, float currentDepth, float dither)
         float2 dir = float2(cos(ang), sin(ang));
         ang += angStep;
 
-        float2 sampleUV = uv + dir * _SSAO_Radius * _CameraDepthTexture_TexelSize.xy;
+        float2 sampleUV = uv + dir * _SSAO_Radius * LIL_SS_TEXEL_SIZE;
         float sampleDepth = lilSSSceneEyeDepth(sampleUV);
 
         // サンプル点が自身より手前にある（遮蔽している）か。_SSAO_Bias で自己遮蔽を防止。
