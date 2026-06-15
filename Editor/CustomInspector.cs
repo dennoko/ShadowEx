@@ -24,6 +24,12 @@ namespace lilToon
         MaterialProperty contactLength;
         MaterialProperty contactThickness;
         MaterialProperty contactIntensity;
+        // 影の外観（色・馴染み・距離フェード）
+        MaterialProperty shadowColor;
+        MaterialProperty colorBlend;
+        MaterialProperty shadowLift;
+        MaterialProperty fadeStart;
+        MaterialProperty fadeEnd;
 
         private static bool isShowCustomProperties;
         private const string shaderName = "ShadowEx";
@@ -53,6 +59,12 @@ namespace lilToon
             contactLength    = FindProperty("_ContactShadow_Length", props);
             contactThickness = FindProperty("_ContactShadow_Thickness", props);
             contactIntensity = FindProperty("_ContactShadow_Intensity", props);
+
+            shadowColor = FindProperty("_ShadowEx_ShadowColor", props);
+            colorBlend  = FindProperty("_ShadowEx_ColorBlend",  props);
+            shadowLift  = FindProperty("_ShadowEx_ShadowLift",  props);
+            fadeStart   = FindProperty("_ShadowEx_FadeStart",   props);
+            fadeEnd     = FindProperty("_ShadowEx_FadeEnd",     props);
         }
 
         protected override void DrawCustomProperties(Material material)
@@ -85,7 +97,7 @@ namespace lilToon
                 if(ssaoEnable.floatValue > 0.5f)
                 {
                     EditorGUI.indentLevel++;
-                    m_MaterialEditor.ShaderProperty(ssaoRadius, "Radius (px)");
+                    m_MaterialEditor.ShaderProperty(ssaoRadius, "Radius (m)");
                     m_MaterialEditor.ShaderProperty(ssaoSamples, "Samples");
                     m_MaterialEditor.ShaderProperty(ssaoIntensity, "Intensity");
                     m_MaterialEditor.ShaderProperty(ssaoBias, "Bias");
@@ -105,6 +117,25 @@ namespace lilToon
                     m_MaterialEditor.ShaderProperty(contactIntensity, "Intensity");
                     EditorGUI.indentLevel--;
                 }
+
+                DrawLine();
+
+                // 影の外観
+                EditorGUILayout.LabelField("影の外観", EditorStyles.boldLabel);
+                EditorGUI.indentLevel++;
+                m_MaterialEditor.ShaderProperty(shadowColor, "Shadow Color");
+                m_MaterialEditor.ShaderProperty(colorBlend,  "Color Blend（メインカラーと混色）");
+                m_MaterialEditor.ShaderProperty(shadowLift,  "Shadow Lift（馴染み・最暗部の持ち上げ）");
+                EditorGUI.indentLevel--;
+
+                DrawLine();
+
+                // 距離フェード
+                EditorGUILayout.LabelField("距離フェード", EditorStyles.boldLabel);
+                EditorGUI.indentLevel++;
+                m_MaterialEditor.ShaderProperty(fadeStart, "Fade Start (m)");
+                m_MaterialEditor.ShaderProperty(fadeEnd,   "Fade End (m)");
+                EditorGUI.indentLevel--;
 
                 // 軽量化の注意（Samples + Steps の合計が多いと多人数インスタンスで重くなる）
                 EditorGUILayout.HelpBox(

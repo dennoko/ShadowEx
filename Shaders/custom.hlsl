@@ -15,7 +15,12 @@
     float _ContactShadow_Steps;         \
     float _ContactShadow_Length;        \
     float _ContactShadow_Thickness;     \
-    float _ContactShadow_Intensity;
+    float _ContactShadow_Intensity;     \
+    float4 _ShadowEx_ShadowColor;       \
+    float _ShadowEx_ColorBlend;         \
+    float _ShadowEx_ShadowLift;         \
+    float _ShadowEx_FadeStart;          \
+    float _ShadowEx_FadeEnd;
 
 // Custom textures
 // TEXTURE2D はここに定義する（SAMPLER は sampler_linear_repeat 等の共有サンプラーを流用可能）
@@ -85,7 +90,7 @@
 // 注意: この時点で fd.col にはエミッションも加算済みのため、エミッション部もわずかに減衰する。
 //       エミッションを減衰させたくない場合は BEFORE_EMISSION_1ST に変更する
 //       （ただしエミッション機能が無効なマテリアルでは挿入点ごと消える点に注意）。
-#define BEFORE_OUTPUT lilApplyScreenSpaceShadow(fd.col, fd.positionWS, fd.origL, fd.uvScn * _ScreenParams.xy);
+#define BEFORE_OUTPUT lilApplyScreenSpaceShadow(fd.col, fd.albedo, fd.positionWS, fd.origL, fd.uvScn * _ScreenParams.xy);
 
 //----------------------------------------------------------------------------------------------------------------------
 // Information about variables

@@ -21,13 +21,22 @@
         // 軽量化のため _SSAO_Samples + _ContactShadow_Steps は合計 12 以下を推奨。
         //--------------------------------------------------------------------------------------------------------------
         [lilToggle]     _SSAO_Enable                ("SSAO Enable", Int) = 1
-                        _SSAO_Radius                ("SSAO Radius (px)", Float) = 8.0
+                        _SSAO_Radius                ("SSAO Radius (m)", Float) = 0.05
                         _SSAO_Samples               ("SSAO Samples", Range(1, 8)) = 6
                         _SSAO_Intensity             ("SSAO Intensity", Range(0, 2)) = 1.0
-                        _SSAO_Bias                  ("SSAO Bias", Float) = 0.02
+                        _SSAO_Bias                  ("SSAO Bias", Float) = 0.005
 
         [lilToggle]     _ContactShadow_Enable       ("Contact Shadow Enable", Int) = 1
                         _ContactShadow_Steps        ("Contact Shadow Steps", Range(1, 8)) = 5
                         _ContactShadow_Length       ("Contact Shadow Length", Float) = 0.15
                         _ContactShadow_Thickness    ("Contact Shadow Thickness", Float) = 0.1
                         _ContactShadow_Intensity    ("Contact Shadow Intensity", Range(0, 1)) = 1.0
+
+        //--------------------------------------------------------------------------------------------------------------
+        // 影の外観（色・馴染み・距離フェード）
+        //--------------------------------------------------------------------------------------------------------------
+                        _ShadowEx_ShadowColor       ("Shadow Color", Color) = (0, 0, 0, 1)
+                        _ShadowEx_ColorBlend        ("Color Blend (Main Color)", Range(0, 1)) = 0.0
+                        _ShadowEx_ShadowLift        ("Shadow Lift", Range(0, 1)) = 0.0
+                        _ShadowEx_FadeStart         ("Fade Start (m)", Float) = 5.0
+                        _ShadowEx_FadeEnd           ("Fade End (m)", Float) = 10.0
