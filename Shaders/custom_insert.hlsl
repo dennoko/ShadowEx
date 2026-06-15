@@ -67,7 +67,7 @@ float lilSSDither(float2 screenPixel)
     return frac(magic.z * frac(dot(screenPixel, magic.xy)));
 }
 
-// SSAO: 画面空間で円状にサンプリングし、手前の深度による遮蔽量を求める。
+// SSAO: スパイラルサンプリング + ビュー空間半径で細部遮蔽を精度よく検出する。
 // 戻り値は 0(完全に影) 〜 1(日向) の係数。
 float lilSSCalcSSAO(float2 uv, float currentDepth, float dither)
 {
@@ -84,18 +84,29 @@ float lilSSCalcSSAO(float2 uv, float currentDepth, float dither)
     sincos(ang, sinAng, cosAng);
     float2 dir = float2(cosAng, sinAng);
 
+    // 投影行列でワールド空間半径をスクリーン UV 半径に変換（距離・FOV・解像度に対して不変）
+    // UNITY_MATRIX_P._m00 = 1/(tan(FOV_y/2)*aspect),  ._m11 = 1/tan(FOV_y/2)
+    float2 uvRadius = float2(UNITY_MATRIX_P._m00, UNITY_MATRIX_P._m11)
+                      * _SSAO_Radius / max(currentDepth, 0.01) * 0.5;
+
+    // 深度微分で表面勾配を推定し、傾斜面での自己遮蔽を低減する（追加コストなし）
+    float slopeBias = abs(ddx(currentDepth)) + abs(ddy(currentDepth));
+    float adaptiveBias = _SSAO_Bias + slopeBias * _SSAO_Radius;
+
     [loop]
     for(int i = 0; i < samples; i++)
     {
-        float2 sampleUV = uv + dir * _SSAO_Radius * LIL_SS_TEXEL_SIZE;
+        // スパイラル分布: sqrt(r) により面積均一サンプリング → 中心付近（細部）を密に、外側（大局）を粗く
+        float spiralR = sqrt((float)(i + 0.5) / samples);
+        float2 sampleUV = uv + dir * spiralR * uvRadius;
         float sampleDepth = lilSSSceneEyeDepth(sampleUV);
 
         float depthDiff = currentDepth - sampleDepth;
-        // サンプル点が自身より手前にある（遮蔽している）か。_SSAO_Bias で自己遮蔽を防止。
-        if(depthDiff > _SSAO_Bias)
+        // サンプル点が自身より手前にある（遮蔽している）か。adaptiveBias で自己遮蔽を防止。
+        if(depthDiff > adaptiveBias)
         {
-            // 物理的な距離ベースのしきい値（maxDepthDiff）を深度から動的に求めてアーティファクト（背景からの影の回り込み）を減衰。
-            float maxDepthDiff = _SSAO_Radius * LIL_SS_TEXEL_SIZE.y * currentDepth * 2.0;
+            // スパイラル各点のワールド空間球体直径を最大深度差として使用（物理的に正確）
+            float maxDepthDiff = spiralR * _SSAO_Radius * 2.0;
             float rangeCheck = smoothstep(0.0, 1.0, maxDepthDiff / max(depthDiff, 1e-4));
             occlusion += rangeCheck;
         }

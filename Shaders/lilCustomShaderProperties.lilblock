@@ -21,10 +21,10 @@
         // 軽量化のため _SSAO_Samples + _ContactShadow_Steps は合計 12 以下を推奨。
         //--------------------------------------------------------------------------------------------------------------
         [lilToggle]     _SSAO_Enable                ("SSAO Enable", Int) = 1
-                        _SSAO_Radius                ("SSAO Radius (px)", Float) = 8.0
+                        _SSAO_Radius                ("SSAO Radius (m)", Float) = 0.05
                         _SSAO_Samples               ("SSAO Samples", Range(1, 8)) = 6
                         _SSAO_Intensity             ("SSAO Intensity", Range(0, 2)) = 1.0
-                        _SSAO_Bias                  ("SSAO Bias", Float) = 0.02
+                        _SSAO_Bias                  ("SSAO Bias", Float) = 0.005
 
         [lilToggle]     _ContactShadow_Enable       ("Contact Shadow Enable", Int) = 1
                         _ContactShadow_Steps        ("Contact Shadow Steps", Range(1, 8)) = 5

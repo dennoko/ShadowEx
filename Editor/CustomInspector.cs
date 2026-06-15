@@ -85,7 +85,7 @@ namespace lilToon
                 if(ssaoEnable.floatValue > 0.5f)
                 {
                     EditorGUI.indentLevel++;
-                    m_MaterialEditor.ShaderProperty(ssaoRadius, "Radius (px)");
+                    m_MaterialEditor.ShaderProperty(ssaoRadius, "Radius (m)");
                     m_MaterialEditor.ShaderProperty(ssaoSamples, "Samples");
                     m_MaterialEditor.ShaderProperty(ssaoIntensity, "Intensity");
                     m_MaterialEditor.ShaderProperty(ssaoBias, "Bias");
