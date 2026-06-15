@@ -25,11 +25,6 @@
 //----------------------------------------------------------------------------------------------------------------------
 #if defined(LIL_PASS_FORWARD)
 
-// _CameraDepthTexture は lilToon 側で Texture2D オブジェクトとして既に宣言されているため、
-// ここでは再宣言しない（再宣言すると redefinition エラー）。サンプリングのみ行う。
-// テクセルサイズは _CameraDepthTexture_TexelSize に頼らず _ScreenParams から算出する
-// （こちらも宣言済みかどうかが環境依存のため）。
-
 // 1 ピクセルあたりの UV 幅（深度テクスチャは全画面解像度なので画面解像度の逆数と一致）。
 #define LIL_SS_TEXEL_SIZE (1.0 / _ScreenParams.xy)
 
@@ -38,11 +33,16 @@
 SamplerState lilSSDepth_linear_clamp;
 
 // 指定スクリーン UV の深度バッファをリニア（アイ）深度で取得する。
-// SAMPLE_DEPTH_TEXTURE（tex2D 展開）は Texture2D 型と不一致かつ頂点ステージで使えないため、
-// Texture2D.SampleLevel(LOD0) で直接サンプリングする（頂点・ピクセル両ステージで有効）。
+// VR Single Pass Instanced (SPI) 環境に対応するため、テクスチャ配列からのサンプリングを分岐処理する。
 float lilSSSceneEyeDepth(float2 uv)
 {
-    float raw = _CameraDepthTexture.SampleLevel(lilSSDepth_linear_clamp, uv, 0).r;
+    #if defined(UNITY_STEREO_INSTANCING_ENABLED) || defined(UNITY_STEREO_MULTIVIEW_ENABLED)
+        // VR (Single Pass Instanced) 時は現在の目に対応したスライスからサンプリング
+        float raw = _CameraDepthTexture.SampleLevel(lilSSDepth_linear_clamp, float3(uv, unity_StereoEyeIndex), 0).r;
+    #else
+        // 通常のシングルパス・マルチパス環境
+        float raw = _CameraDepthTexture.SampleLevel(lilSSDepth_linear_clamp, uv, 0).r;
+    #endif
     return LinearEyeDepth(raw);
 }
 
@@ -76,22 +76,32 @@ float lilSSCalcSSAO(float2 uv, float currentDepth, float dither)
     float angStep = 6.2831853 / samples;
     float ang = dither * 6.2831853; // ディザでカーネル全体を回転させ、少サンプルでもノイズを分散
 
+    // ループ外で三角関数を計算し、回転行列の定数を求める
+    float sinStep, cosStep;
+    sincos(angStep, sinStep, cosStep);
+
+    float sinAng, cosAng;
+    sincos(ang, sinAng, cosAng);
+    float2 dir = float2(cosAng, sinAng);
+
     [loop]
     for(int i = 0; i < samples; i++)
     {
-        float2 dir = float2(cos(ang), sin(ang));
-        ang += angStep;
-
         float2 sampleUV = uv + dir * _SSAO_Radius * LIL_SS_TEXEL_SIZE;
         float sampleDepth = lilSSSceneEyeDepth(sampleUV);
 
+        float depthDiff = currentDepth - sampleDepth;
         // サンプル点が自身より手前にある（遮蔽している）か。_SSAO_Bias で自己遮蔽を防止。
-        if(sampleDepth + _SSAO_Bias < currentDepth)
+        if(depthDiff > _SSAO_Bias)
         {
-            // 深度差が大きすぎる無関係なオブジェクトによるアーティファクトを減衰。
-            float rangeCheck = smoothstep(0.0, 1.0, _SSAO_Radius / max(abs(currentDepth - sampleDepth), 1e-4));
+            // 物理的な距離ベースのしきい値（maxDepthDiff）を深度から動的に求めてアーティファクト（背景からの影の回り込み）を減衰。
+            float maxDepthDiff = _SSAO_Radius * LIL_SS_TEXEL_SIZE.y * currentDepth * 2.0;
+            float rangeCheck = smoothstep(0.0, 1.0, maxDepthDiff / max(depthDiff, 1e-4));
             occlusion += rangeCheck;
         }
+
+        // 2D回転行列を用いてベクトルを回転（cos/sinの再呼び出しを回避）
+        dir = float2(dir.x * cosStep - dir.y * sinStep, dir.x * sinStep + dir.y * cosStep);
     }
 
     occlusion = (occlusion / samples) * _SSAO_Intensity;
@@ -123,8 +133,8 @@ float lilSSCalcContactShadow(float2 startUV, float currentDepth, float3 position
         float2 sampleUV = startUV + stepUV * t;
         float testDepth = currentDepth + stepDepth * t;
 
-        // 画面外に出たら終了。
-        if(sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) break;
+        // 画面外に出たら終了 (ベクトル化した高速チェック)
+        if(any(sampleUV != saturate(sampleUV))) break;
 
         float sceneDepth = lilSSSceneEyeDepth(sampleUV);
 
@@ -151,10 +161,13 @@ float lilSSCalcContactShadow(float2 startUV, float currentDepth, float3 position
 void lilApplyScreenSpaceShadow(inout float4 col, float3 positionWS, float3 lightDirWS, float2 screenPixel)
 {
 #if defined(LIL_PASS_FORWARD)
+    // 機能が無効化されている場合は、UV変換や深度サンプリングを行う前に早期リターンしてGPU負荷を削減する
+    if(_SSAO_Enable <= 0.5 && _ContactShadow_Enable <= 0.5) return;
+
     float2 uv = lilSSWorldToScreenUV(positionWS);
 
-    // 画面外に投影される場合（ミラー・特殊カメラ等）は何もしない。
-    if(uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return;
+    // 画面外に投影される場合（ミラー・特殊カメラ等）は何もしない。 (高速なベクトル化チェック)
+    if(any(uv != saturate(uv))) return;
 
     float currentDepth = lilSSWorldToEyeDepth(positionWS);
     float dither = lilSSDither(screenPixel);
