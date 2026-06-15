@@ -25,18 +25,24 @@
 //----------------------------------------------------------------------------------------------------------------------
 #if defined(LIL_PASS_FORWARD)
 
-// _CameraDepthTexture は lilToon / Unity 側で既に宣言されているため、ここでは宣言しない
-// （宣言すると redefinition エラーになる）。サンプリングのみ行う。
+// _CameraDepthTexture は lilToon 側で Texture2D オブジェクトとして既に宣言されているため、
+// ここでは再宣言しない（再宣言すると redefinition エラー）。サンプリングのみ行う。
 // テクセルサイズは _CameraDepthTexture_TexelSize に頼らず _ScreenParams から算出する
 // （こちらも宣言済みかどうかが環境依存のため）。
 
 // 1 ピクセルあたりの UV 幅（深度テクスチャは全画面解像度なので画面解像度の逆数と一致）。
 #define LIL_SS_TEXEL_SIZE (1.0 / _ScreenParams.xy)
 
+// 深度テクスチャ用のサンプラー（専用名で重複宣言を回避）。
+// Unity はサンプラー名に含まれる linear / clamp 等のキーワードからステートを推定する。
+SamplerState lilSSDepth_linear_clamp;
+
 // 指定スクリーン UV の深度バッファをリニア（アイ）深度で取得する。
+// SAMPLE_DEPTH_TEXTURE（tex2D 展開）は Texture2D 型と不一致かつ頂点ステージで使えないため、
+// Texture2D.SampleLevel(LOD0) で直接サンプリングする（頂点・ピクセル両ステージで有効）。
 float lilSSSceneEyeDepth(float2 uv)
 {
-    float raw = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
+    float raw = _CameraDepthTexture.SampleLevel(lilSSDepth_linear_clamp, uv, 0).r;
     return LinearEyeDepth(raw);
 }
 
