@@ -90,7 +90,7 @@
 // 注意: この時点で fd.col にはエミッションも加算済みのため、エミッション部もわずかに減衰する。
 //       エミッションを減衰させたくない場合は BEFORE_EMISSION_1ST に変更する
 //       （ただしエミッション機能が無効なマテリアルでは挿入点ごと消える点に注意）。
-#define BEFORE_OUTPUT lilApplyScreenSpaceShadow(fd.col, fd.albedo, fd.positionWS, fd.origL, fd.uvScn * _ScreenParams.xy);
+#define BEFORE_OUTPUT lilApplyScreenSpaceShadow(fd.col, fd.albedo, fd.positionWS, fd.N, fd.origL, fd.uvScn * _ScreenParams.xy);
 
 //----------------------------------------------------------------------------------------------------------------------
 // Information about variables

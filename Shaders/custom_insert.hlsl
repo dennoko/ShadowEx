@@ -69,7 +69,7 @@ float lilSSDither(float2 screenPixel)
 
 // SSAO: スパイラルサンプリング + ビュー空間半径で細部遮蔽を精度よく検出する。
 // 戻り値は 0(完全に影) 〜 1(日向) の係数。
-float lilSSCalcSSAO(float2 uv, float currentDepth, float dither)
+float lilSSCalcSSAO(float2 uv, float currentDepth, float3 normalWS, float dither)
 {
     int samples = (int)max(_SSAO_Samples, 1.0);
     float occlusion = 0.0;
@@ -89,15 +89,28 @@ float lilSSCalcSSAO(float2 uv, float currentDepth, float dither)
     float2 uvRadius = float2(UNITY_MATRIX_P._m00, UNITY_MATRIX_P._m11)
                       * _SSAO_Radius / max(currentDepth, 0.01) * 0.5;
 
-    // 深度微分で表面勾配を推定し、傾斜面での自己遮蔽を低減する（追加コストなし）
-    float slopeBias = abs(ddx(currentDepth)) + abs(ddy(currentDepth));
-    float adaptiveBias = _SSAO_Bias + slopeBias * _SSAO_Radius;
+    // 法線ベースの解析的スロープバイアス（髪の境界などで微分が巨大化し影が消えるのを防ぐ）
+    float3 normalVS = mul((float3x3)UNITY_MATRIX_V, normalWS);
+    float slope = length(normalVS.xy) / max(abs(normalVS.z), 1e-4);
+    float slopeBias = min(slope, 2.0) * _SSAO_Radius * 0.1;
+    float adaptiveBias = _SSAO_Bias + slopeBias;
 
     [loop]
     for(int i = 0; i < samples; i++)
     {
-        // スパイラル分布: sqrt(r) により面積均一サンプリング → 中心付近（細部）を密に、外側（大局）を粗く
-        float spiralR = sqrt((float)(i + 0.5) / samples);
+        // 近傍と広域をミックスするハイブリッド・スパイラル分布
+        // 前半は極近傍をサンプリングして細部（髪の隙間など）を捉え、後半は広域の影を捉える
+        float spiralR;
+        if (i < samples / 2)
+        {
+            spiralR = ((float)i + 0.5) / (samples / 2) * 0.25;
+        }
+        else
+        {
+            float t = ((float)(i - samples / 2) + 0.5) / (samples - samples / 2);
+            spiralR = 0.25 + 0.75 * sqrt(t);
+        }
+        
         float2 sampleUV = uv + dir * spiralR * uvRadius;
         float sampleDepth = lilSSSceneEyeDepth(sampleUV);
 
@@ -169,7 +182,7 @@ float lilSSCalcContactShadow(float2 startUV, float currentDepth, float3 position
 // 画面空間影を fd.col に適用する。BEFORE_OUTPUT から呼ばれる。
 // lilFragData を引数に取らない（このファイル挿入時点では未定義のため）。
 // 本体は forward パスのみ。それ以外のパス（ForwardAdd 等で BEFORE_OUTPUT が展開されても）では何もしない。
-void lilApplyScreenSpaceShadow(inout float4 col, float3 albedo, float3 positionWS, float3 lightDirWS, float2 screenPixel)
+void lilApplyScreenSpaceShadow(inout float4 col, float3 albedo, float3 positionWS, float3 normalWS, float3 lightDirWS, float2 screenPixel)
 {
 #if defined(LIL_PASS_FORWARD)
     // 機能が無効化されている場合は、UV変換や深度サンプリングを行う前に早期リターンしてGPU負荷を削減する
@@ -185,7 +198,7 @@ void lilApplyScreenSpaceShadow(inout float4 col, float3 albedo, float3 positionW
 
     float shadow = 1.0;
     if(_SSAO_Enable > 0.5)
-        shadow *= lilSSCalcSSAO(uv, currentDepth, dither);
+        shadow *= lilSSCalcSSAO(uv, currentDepth, normalWS, dither);
     if(_ContactShadow_Enable > 0.5)
         shadow *= lilSSCalcContactShadow(uv, currentDepth, positionWS, lightDirWS, dither);
 
