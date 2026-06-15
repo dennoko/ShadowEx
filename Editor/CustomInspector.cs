@@ -158,27 +158,12 @@ namespace lilToon
             ltsloto     = Shader.Find("Hidden/" + shaderName + "/Lite/OnePassTransparentOutline");
             ltsltto     = Shader.Find("Hidden/" + shaderName + "/Lite/TwoPassTransparentOutline");
 
-            ltsref      = Shader.Find("Hidden/" + shaderName + "/Refraction");
-            ltsrefb     = Shader.Find("Hidden/" + shaderName + "/RefractionBlur");
-            ltsfur      = Shader.Find("Hidden/" + shaderName + "/Fur");
-            ltsfurc     = Shader.Find("Hidden/" + shaderName + "/FurCutout");
-            ltsfurtwo   = Shader.Find("Hidden/" + shaderName + "/FurTwoPass");
-            ltsfuro     = Shader.Find(shaderName + "/[Optional] FurOnly/Transparent");
-            ltsfuroc    = Shader.Find(shaderName + "/[Optional] FurOnly/Cutout");
-            ltsfurotwo  = Shader.Find(shaderName + "/[Optional] FurOnly/TwoPass");
-            ltsgem      = Shader.Find("Hidden/" + shaderName + "/Gem");
-            ltsfs       = Shader.Find(shaderName + "/[Optional] FakeShadow");
-
-            ltsover     = Shader.Find(shaderName + "/[Optional] Overlay");
-            ltsoover    = Shader.Find(shaderName + "/[Optional] OverlayOnePass");
-            ltslover    = Shader.Find(shaderName + "/[Optional] LiteOverlay");
-            ltsloover   = Shader.Find(shaderName + "/[Optional] LiteOverlayOnePass");
+            // 削除した特殊系バリエーション（Refraction / Fur / FurOnly / Gem / FakeShadow / Overlay）は
+            // Shader.Find() しない（探すと null が入り続けるため）。
 
             ltsm        = Shader.Find(shaderName + "/lilToonMulti");
             ltsmo       = Shader.Find("Hidden/" + shaderName + "/MultiOutline");
-            ltsmref     = Shader.Find("Hidden/" + shaderName + "/MultiRefraction");
-            ltsmfur     = Shader.Find("Hidden/" + shaderName + "/MultiFur");
-            ltsmgem     = Shader.Find("Hidden/" + shaderName + "/MultiGem");
+            // MultiRefraction / MultiFur / MultiGem も削除済みのため参照しない。
         }
 
         // You can create a menu like this
